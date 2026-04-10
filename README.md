@@ -86,19 +86,19 @@ Turn your coding session into something **fun, expressive, and slightly chaotic*
 
 ### ❌ Error Reaction
 
-![Error](./screenshots/error.png)
+![Error](./screenshot/3.png)
 
 ### 😂 Meme Popup
 
-![Popup](./screenshots/popup.png)
+![Popup](./screenshot/2.png)
 
 ### 🐾 Companion Reaction
 
-![Pet](./screenshots/pet.png)
+![Pet](./screenshot/1.png)
 
 ### 🔥 Success Reaction
 
-![Success](./screenshots/success.png)
+![Success](./screenshot/2.png)
 
 ---
 
