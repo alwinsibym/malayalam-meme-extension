@@ -1,0 +1,270 @@
+{
+  "name": "malayalam-coding-memes",
+  "displayName": "Malayalam Coding Memes",
+  "description": "Humorous audio alerts using iconic Malayalam movie dialogues and memes for VS Code events. Adipoli coding experience!",
+  "version": "1.0.0",
+  "publisher": "malayalam-devs",
+  "icon": "assets/icon.png",
+  "engines": {
+    "vscode": "^1.88.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "malayalam",
+    "memes",
+    "fun",
+    "audio",
+    "alerts",
+    "coding",
+    "entertainment"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "malayalam-memes-explorer",
+          "title": "Malayalam Memes",
+          "icon": "assets/icon_sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "malayalam-memes-explorer": [
+        {
+          "type": "webview",
+          "id": "malayalamMemes.sidebar",
+          "name": "Meme Activity"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "malayalamMemes.toggle",
+        "title": "Malayalam Memes: Toggle On/Off",
+        "icon": "$(megaphone)"
+      },
+      {
+        "command": "malayalamMemes.controlPanel",
+        "title": "Malayalam Memes: Open Control Panel",
+        "icon": "$(settings-gear)"
+      },
+      {
+        "command": "malayalamMemes.volumeUp",
+        "title": "Malayalam Memes: Volume Up 🔊"
+      },
+      {
+        "command": "malayalamMemes.volumeDown",
+        "title": "Malayalam Memes: Volume Down 🔉"
+      },
+      {
+        "command": "malayalamMemes.setVolume",
+        "title": "Malayalam Memes: Set Volume 🎚️"
+      },
+      {
+        "command": "malayalamMemes.playRandom",
+        "title": "Malayalam Memes: Play Random Meme 🎲"
+      },
+      {
+        "command": "malayalamMemes.playCategory",
+        "title": "Malayalam Memes: Play by Category 🎬"
+      },
+      {
+        "command": "malayalamMemes.showGallery",
+        "title": "Malayalam Memes: Meme Gallery 🎵",
+        "icon": "$(library)"
+      },
+      {
+        "command": "malayalamMemes.sagarAliasJacky",
+        "title": "Malayalam Memes: SAGAR ALIAS JACKY! 🔥",
+        "icon": "$(zap)"
+      },
+      {
+        "command": "malayalamMemes.testTerminalError",
+        "title": "Malayalam Memes: Test Terminal Error 💥"
+      },
+      {
+        "command": "malayalamMemes.showStats",
+        "title": "Malayalam Memes: Show Session Stats 📊"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "malayalamMemes.sagarAliasJacky",
+        "key": "ctrl+alt+j",
+        "mac": "cmd+alt+j"
+      },
+      {
+        "command": "malayalamMemes.toggle",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m"
+      },
+      {
+        "command": "malayalamMemes.controlPanel",
+        "key": "ctrl+shift+m",
+        "mac": "cmd+shift+m"
+      },
+      {
+        "command": "malayalamMemes.volumeUp",
+        "key": "ctrl+alt+up",
+        "mac": "cmd+alt+up"
+      },
+      {
+        "command": "malayalamMemes.volumeDown",
+        "key": "ctrl+alt+down",
+        "mac": "cmd+alt+down"
+      },
+      {
+        "command": "malayalamMemes.playRandom",
+        "key": "ctrl+alt+p",
+        "mac": "cmd+alt+p"
+      }
+    ],
+    "configuration": {
+      "title": "Malayalam Coding Memes",
+      "properties": {
+        "malayalamMemes.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable/Disable all meme alerts.",
+          "order": 1
+        },
+        "malayalamMemes.volume": {
+          "type": "number",
+          "default": 0.5,
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Volume for audio alerts (0.0 = mute, 1.0 = max). Use 'Malayalam Memes: Set Volume' for a visual slider.",
+          "order": 2
+        },
+        "malayalamMemes.cooldown": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 300,
+          "description": "Minimum seconds between alerts to prevent spam.",
+          "order": 3
+        },
+        "malayalamMemes.showNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show fun Malayalam dialogue pop-ups when a meme plays.",
+          "order": 4
+        },
+        "malayalamMemes.inactivityTimeout": {
+          "type": "number",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Minutes of inactivity before playing an idle alert.",
+          "order": 5
+        },
+        "malayalamMemes.sourcePreference": {
+          "type": "string",
+          "enum": ["hybrid", "local"],
+          "default": "hybrid",
+          "description": "Audio source preference: 'hybrid' (local + remote) or 'local' only.",
+          "order": 6
+        },
+        "malayalamMemes.remoteConfigUrl": {
+          "type": "string",
+          "default": "",
+          "description": "URL of remote meme_config.json (optional, for additional meme variety).",
+          "order": 7
+        },
+        "malayalamMemes.category.startup": {
+          "type": "boolean",
+          "default": true,
+          "description": "🎬 Play meme on VS Code startup.",
+          "order": 10
+        },
+        "malayalamMemes.category.folderopen": {
+          "type": "boolean",
+          "default": true,
+          "description": "📂 Play meme when a new folder is opened.",
+          "order": 11
+        },
+        "malayalamMemes.category.inactivity": {
+          "type": "boolean",
+          "default": true,
+          "description": "😴 Play meme after being idle.",
+          "order": 12
+        },
+        "malayalamMemes.category.terminalerror": {
+          "type": "boolean",
+          "default": true,
+          "description": "💥 Play meme on terminal command failure.",
+          "order": 13
+        },
+        "malayalamMemes.category.projecterror": {
+          "type": "boolean",
+          "default": true,
+          "description": "🐛 Play meme when new code errors appear.",
+          "order": 14
+        },
+        "malayalamMemes.category.deepwork": {
+          "type": "boolean",
+          "default": true,
+          "description": "🧠 Play meme after sustained deep coding (50+ edits in 2 min).",
+          "order": 15
+        },
+        "malayalamMemes.category.success": {
+          "type": "boolean",
+          "default": true,
+          "description": "✅ Play meme on terminal command success.",
+          "order": 16
+        },
+        "malayalamMemes.category.gitpush": {
+          "type": "boolean",
+          "default": true,
+          "description": "🚀 Play meme on successful git push.",
+          "order": 17
+        },
+        "malayalamMemes.category.filesave": {
+          "type": "boolean",
+          "default": false,
+          "description": "💾 Play a meme every time you save a file (disabled by default to avoid spam).",
+          "order": 18
+        },
+        "malayalamMemes.gamification": {
+          "type": "boolean",
+          "default": true,
+          "description": "🏆 Enable Developer Points, Levels, and WPM tracking.",
+          "order": 30
+        },
+        "malayalamMemes.showVisuals": {
+          "type": "boolean",
+          "default": true,
+          "description": "🖼️ Show GIFs/Images in the sidebar when a meme plays.",
+          "order": 31
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "echo \"No tests configured yet\""
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.80.0",
+    "@types/node": "16.x",
+    "typescript": "^5.1.3",
+    "eslint": "^8.41.0",
+    "@typescript-eslint/parser": "^5.59.8",
+    "@typescript-eslint/eslint-plugin": "^5.59.8"
+  },
+  "dependencies": {
+    "sound-play": "^1.1.0",
+    "axios": "^1.4.0",
+    "is-online": "^10.0.0"
+  }
+}

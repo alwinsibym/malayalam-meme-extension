@@ -1,0 +1,1 @@
+Add GIFs here named category.gif (e.g., success.gif, terminalerror.gif) to see them in the sidebar!

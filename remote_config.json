@@ -1,0 +1,24 @@
+{
+  "startup": [
+    "https://example.com/audio/startup_remote_01.mp3",
+    "https://example.com/audio/startup_remote_02.mp3"
+  ],
+  "folderopen": [
+    "https://example.com/audio/folder_open_remote_01.mp3"
+  ],
+  "inactivity": [
+    "https://example.com/audio/idle_meme_01.mp3"
+  ],
+  "terminalerror": [
+    "https://example.com/audio/fail_meme_01.mp3"
+  ],
+  "projecterror": [
+    "https://example.com/audio/error_meme_01.mp3"
+  ],
+  "success": [
+    "https://example.com/audio/success_meme_01.mp3"
+  ],
+  "gitpush": [
+    "https://example.com/audio/push_success_01.mp3"
+  ]
+}
