@@ -201,3 +201,20 @@ const MEME_DIALOGUES: Record<MemeCategory, string[]> = {
     [MemeCategory.GitPush]: ['🚀 "Push cheythu! Full success!"'],
     [MemeCategory.Shutdown]: ['🚪 "Enna njan angotu...!", "🏃‍♂️ "Pinne kaanam machane! Bye!"']
 };
+
+export const COMPANION_DIALOGUES: Record<string, string[]> = {
+    'jacky': [
+        '🎬 "Sagar Alias Jacky... Ormayundallo?"',
+        '😎 "Ivide oru power shortage undallo!"',
+        '🔥 "Kali thudangi!"',
+        '⚡ "Nammalillaathe enthapposh?"'
+    ],
+    'dasan_vijayan': [
+        '👬 "Vijaya... namukku entha ee budhi nillathe poyathu?"',
+        '🌴 "Dasa... namukku Dubai-il poyalo?"',
+        '💼 "Ithu CID-ude trick aanu!"',
+        '🕵️‍♂️ "Namukkini enthu cheyyum?"'
+    ],
+    'cat': ['🐱 "Meow! Code nannaayi ezhuthu!"', '🐾 "Purr... njan koodeyundu!"'],
+    'dog': ['🐶 "Woof! Debug cheyyeda mone!"', '🦴 "Bones onnumille?"']
+};

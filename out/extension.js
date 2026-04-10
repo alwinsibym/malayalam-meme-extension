@@ -188,6 +188,12 @@ function registerAllCommands(context, memeManager) {
     context.subscriptions.push(vscode.commands.registerCommand('malayalamMemes.testTerminalError', () => {
         memeManager.play(memeManager_1.MemeCategory.TerminalError, true);
     }));
+    // 8. Toggle Pet
+    context.subscriptions.push(vscode.commands.registerCommand('malayalamMemes.togglePet', async () => {
+        const config = vscode.workspace.getConfiguration('malayalamMemes');
+        await config.update('showPet', !config.get('showPet'), vscode.ConfigurationTarget.Global);
+        vscode.window.showInformationMessage(`Pixel Pet is now ${config.get('showPet') ? 'ALIVE! 🐾' : 'RESTING. 😴'}`);
+    }));
 }
 function updateStatusBar() {
     const enabled = vscode.workspace.getConfiguration('malayalamMemes').get('enabled');
@@ -221,7 +227,24 @@ class MemeSidebarProvider {
     resolveWebviewView(webviewView) {
         this._view = webviewView;
         webviewView.webview.options = { enableScripts: true, localResourceRoots: [this._extensionUri] };
+        webviewView.webview.onDidReceiveMessage(async (msg) => {
+            const config = vscode.workspace.getConfiguration('malayalamMemes');
+            const companion = (config.get('selectedCompanion') || 'Jacky').toLowerCase();
+            if (msg.command === 'petClick' || msg.command === 'autoTalk') {
+                const dialogues = memeManager_1.COMPANION_DIALOGUES[companion] || [];
+                const text = dialogues[Math.floor(Math.random() * dialogues.length)];
+                // Inform webview to show bubble
+                webviewView.webview.postMessage({ command: 'showSpeech', text });
+                // Play random meme sound (categorized if possible, or just random)
+                this._memeManager.play(Math.random() > 0.5 ? memeManager_1.MemeCategory.Success : memeManager_1.MemeCategory.Startup, true);
+            }
+        });
         this.updateWebview();
+        // Refresh when config changes
+        vscode.workspace.onDidChangeConfiguration(e => {
+            if (e.affectsConfiguration('malayalamMemes'))
+                this.updateWebview();
+        });
     }
     updateWebview() {
         if (!this._view)
@@ -229,23 +252,53 @@ class MemeSidebarProvider {
         this._view.webview.html = this._getHtml(this._memeManager.getStats());
     }
     _getHtml(stats) {
+        const config = vscode.workspace.getConfiguration('malayalamMemes');
+        const showVisuals = config.get('showVisuals');
+        const showPet = config.get('showPet');
+        const companion = (config.get('selectedCompanion') || 'Jacky').toLowerCase();
+        const movement = config.get('companionMovement') || 'Autonomous';
         const moodColors = { 'Mass': '#facc15', 'God Mode': '#f472b6', 'Frustrated': '#f87171', 'Focus': '#38bdf8', 'Idle': '#94a3b8', 'Jacky Entry': '#fbbf24' };
         const color = moodColors[stats.mood] || '#38bdf8';
-        const categoryKey = (stats.lastCategory || 'startup').toLowerCase().replace(/\s/g, '');
-        const visualsDir = path.join(this._extensionUri.fsPath, 'assets', 'visuals', categoryKey);
-        let gifFile = 'default.gif';
-        try {
-            const files = fs.readdirSync(visualsDir).filter(f => f.endsWith('.gif'));
-            if (files.length > 0)
-                gifFile = files[Math.floor(Math.random() * files.length)];
+        let gifUri = '';
+        if (showVisuals) {
+            const categoryKey = (stats.lastCategory || 'startup').toLowerCase().replace(/\s/g, '');
+            const visualsDir = path.join(this._extensionUri.fsPath, 'assets', 'visuals', categoryKey);
+            let gifFile = 'default.gif';
+            try {
+                if (fs.existsSync(visualsDir)) {
+                    const files = fs.readdirSync(visualsDir).filter(f => f.endsWith('.gif'));
+                    if (files.length > 0)
+                        gifFile = files[Math.floor(Math.random() * files.length)];
+                }
+            }
+            catch { /* ignore */ }
+            gifUri = this._view.webview.asWebviewUri(vscode.Uri.file(path.join(visualsDir, gifFile))).toString();
         }
-        catch { /* ignore */ }
-        const gifUri = this._view.webview.asWebviewUri(vscode.Uri.file(path.join(visualsDir, gifFile)));
+        const companionUri = this._view.webview.asWebviewUri(vscode.Uri.file(path.join(this._extensionUri.fsPath, 'assets', 'companions', `${companion}.png`))).toString();
         return `<!DOCTYPE html><html><head><style>
-            body { font-family: sans-serif; padding: 15px; background: #0f172a; color: white; display:flex; flex-direction:column; gap:15px; }
-            .mood-badge { background: ${color}; color: black; padding: 10px; border-radius: 20px; font-weight: 800; text-align: center; text-transform: uppercase; box-shadow: 0 0 15px ${color}44; }
-            .visual-container { width: 100%; aspect-ratio: 1/1; background: #1e293b; border-radius: 12px; overflow: hidden; border: 2px solid ${color}33; display: flex; align-items:center; justify-content:center; }
+            body { font-family: sans-serif; padding: 15px; background: #0f172a; color: white; display:flex; flex-direction:column; gap:15px; user-select: none; }
+            .mood-badge { background: ${color}; color: black; padding: 10px; border-radius: 20px; font-weight: 800; text-align: center; text-transform: uppercase; box-shadow: 0 0 15px ${color}44; transition: all 0.3s; }
+            .visual-container { width: 100%; aspect-ratio: 4/3; background: #1e293b; border-radius: 12px; overflow: hidden; border: 2px solid ${color}33; display: ${showVisuals ? 'flex' : 'none'}; align-items:center; justify-content:center; position: relative; }
             .visual-container img { width: 100%; height: 100%; object-fit: cover; }
+            
+            .companion-world { 
+                width: 100%; height: 200px; position: relative; border-radius: 12px; 
+                background: linear-gradient(to bottom, #1e293b, #0f172a); 
+                display: ${showPet ? 'block' : 'none'}; cursor: grab; overflow: hidden; border: 1px solid rgba(255,255,255,0.05);
+            }
+            .companion { 
+                position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); 
+                width: 64px; image-rendering: pixelated; transition: left 2s ease-in-out, transform 0.2s;
+                z-index: 10;
+            }
+            .bubble {
+                position: absolute; background: white; color: black; padding: 8px 12px; border-radius: 12px;
+                font-size: 11px; font-weight: bold; bottom: 90px; left: 50%; transform: translateX(-50%);
+                white-space: nowrap; visibility: hidden; opacity: 0; transition: opacity 0.3s; z-index: 20;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            }
+            .bubble::after { content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 5px solid white; }
+            
             .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
             .card { background: #1e293b; padding: 10px; border-radius: 8px; border-left: 3px solid ${color}; }
             .val { font-size: 1.4em; font-weight: bold; color: ${color}; }
@@ -254,8 +307,72 @@ class MemeSidebarProvider {
         </style></head><body>
             <div class="mood-badge">${stats.mood}</div>
             <div class="visual-container"><img src="${gifUri}" onerror="this.src='https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidWtwN2N3eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxGZfVjVIdy/giphy.gif';" /></div>
+            
+            <div class="companion-world" id="world">
+                <div class="bubble" id="bubble">...</div>
+                <img src="${companionUri}" class="companion" id="companion" />
+            </div>
+
             <div class="stats"><div class="card"><div class="val">${stats.devPoints}</div><div class="lab">POINTS</div></div><div class="card"><div class="val">${stats.wpm}</div><div class="lab">WPM</div></div></div>
             <div class="rank">🏅 ${stats.rank}</div>
+
+            <script>
+                const vscode = acquireVsCodeApi();
+                const companion = document.getElementById('companion');
+                const world = document.getElementById('world');
+                const bubble = document.getElementById('bubble');
+                
+                const MOVEMENT = "${movement}";
+                
+                function showSpeech(text) {
+                    bubble.innerText = text;
+                    bubble.style.visibility = 'visible';
+                    bubble.style.opacity = '1';
+                    bubble.style.left = companion.style.left;
+                    setTimeout(() => { bubble.style.opacity = '0'; }, 3000);
+                }
+
+                window.addEventListener('message', event => {
+                    const message = event.data;
+                    if (message.command === 'showSpeech') showSpeech(message.text);
+                });
+
+                companion.onclick = () => {
+                    companion.style.transform = 'translateX(-50%) scale(1.3)';
+                    setTimeout(() => companion.style.transform = 'translateX(-50%) scale(1)', 200);
+                    vscode.postMessage({ command: 'petClick' });
+                };
+
+                // Autonomous Movement Logic
+                if (MOVEMENT === 'Autonomous') {
+                    setInterval(() => {
+                        const randomX = Math.random() * (world.clientWidth - 80) + 40;
+                        companion.style.left = randomX + 'px';
+                        
+                        // Small chance to talk spontaneously
+                        if (Math.random() > 0.8) {
+                            vscode.postMessage({ command: 'autoTalk' });
+                        }
+                    }, 5000);
+                } else if (MOVEMENT === 'Idle') {
+                    companion.style.animation = 'idle 1s infinite alternate ease-in-out';
+                }
+
+                // Simple drag logic
+                let isDragging = false;
+                companion.onmousedown = (e) => { isDragging = true; };
+                document.onmouseup = () => { isDragging = false; };
+                world.onmousemove = (e) => {
+                    if (isDragging) {
+                        const rect = world.getBoundingClientRect();
+                        const x = Math.max(30, Math.min(rect.width - 30, e.clientX - rect.left));
+                        companion.style.left = x + 'px';
+                        companion.style.transition = 'none';
+                    } else {
+                        companion.style.transition = MOVEMENT === 'Autonomous' ? 'left 2s ease-in-out' : 'transform 0.2s';
+                    }
+                };
+            </script>
         </body></html>`;
     }
 }

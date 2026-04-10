@@ -91,6 +91,10 @@
       {
         "command": "malayalamMemes.showStats",
         "title": "Malayalam Memes: Show Session Stats 📊"
+      },
+      {
+        "command": "malayalamMemes.togglePet",
+        "title": "Malayalam Memes: Toggle Meme Companion 🎭"
       }
     ],
     "keybindings": [
@@ -242,6 +246,26 @@
           "default": true,
           "description": "🖼️ Show GIFs/Images in the sidebar when a meme plays.",
           "order": 31
+        },
+        "malayalamMemes.showPet": {
+          "type": "boolean",
+          "default": false,
+          "description": "🎭 Show an interactive 2D pixel movie companion.",
+          "order": 32
+        },
+        "malayalamMemes.selectedCompanion": {
+          "type": "string",
+          "enum": ["Jacky", "Dasan_Vijayan", "Cat", "Dog"],
+          "default": "Jacky",
+          "description": "Choose your iconic Malayalam movie companion.",
+          "order": 33
+        },
+        "malayalamMemes.companionMovement": {
+          "type": "string",
+          "enum": ["Static", "Idle", "Autonomous"],
+          "default": "Autonomous",
+          "description": "How the companion moves: 'Static' (fixed), 'Idle' (bouncing), 'Autonomous' (walks around).",
+          "order": 34
         }
       }
     }

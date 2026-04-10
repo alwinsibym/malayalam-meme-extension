@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MemeManager = exports.MemeCategory = void 0;
+exports.COMPANION_DIALOGUES = exports.MemeManager = exports.MemeCategory = void 0;
 const vscode = __importStar(require("vscode"));
 const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
@@ -208,5 +208,21 @@ const MEME_DIALOGUES = {
     [MemeCategory.Success]: ['✅ "Thankyou! Nannaayi!"', '🎉 "Kidu! Ellam shariyaayi!"'],
     [MemeCategory.GitPush]: ['🚀 "Push cheythu! Full success!"'],
     [MemeCategory.Shutdown]: ['🚪 "Enna njan angotu...!", "🏃‍♂️ "Pinne kaanam machane! Bye!"']
+};
+exports.COMPANION_DIALOGUES = {
+    'jacky': [
+        '🎬 "Sagar Alias Jacky... Ormayundallo?"',
+        '😎 "Ivide oru power shortage undallo!"',
+        '🔥 "Kali thudangi!"',
+        '⚡ "Nammalillaathe enthapposh?"'
+    ],
+    'dasan_vijayan': [
+        '👬 "Vijaya... namukku entha ee budhi nillathe poyathu?"',
+        '🌴 "Dasa... namukku Dubai-il poyalo?"',
+        '💼 "Ithu CID-ude trick aanu!"',
+        '🕵️‍♂️ "Namukkini enthu cheyyum?"'
+    ],
+    'cat': ['🐱 "Meow! Code nannaayi ezhuthu!"', '🐾 "Purr... njan koodeyundu!"'],
+    'dog': ['🐶 "Woof! Debug cheyyeda mone!"', '🦴 "Bones onnumille?"']
 };
 //# sourceMappingURL=memeManager.js.map
