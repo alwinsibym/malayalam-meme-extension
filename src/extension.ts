@@ -9,9 +9,18 @@ let charCount = 0;
 let lastUpdate = Date.now();
 let statusItem: vscode.StatusBarItem;
 let volumeItem: vscode.StatusBarItem;
+let pointsDecorationType: vscode.TextEditorDecorationType;
 
 export function activate(context: vscode.ExtensionContext) {
     const memeManager = MemeManager.getInstance(context);
+
+    pointsDecorationType = vscode.window.createTextEditorDecorationType({
+        after: {
+            margin: '0 0 0 2em',
+            textDecoration: 'none; font-weight: bold; color: #fbbf24; font-size: 0.9em; position: absolute;',
+        },
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed
+    });
 
     // ── Status Bar Setup ─────────────────────────────────────────────
     statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -35,8 +44,15 @@ export function activate(context: vscode.ExtensionContext) {
     // ── Typing & WPM Tracking ────────────────────────────────────────
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((e) => {
         if (e.contentChanges.length > 0) {
-            charCount += e.contentChanges[0].text.length;
+            const added = e.contentChanges[0].text.length;
+            charCount += added;
             resetInactivityTimer(context);
+
+            const editor = vscode.window.activeTextEditor;
+            if (editor && added > 0 && added < 10) { // Only for typing, not copy-paste
+                const points = Math.floor(added / 2) + 1;
+                showPointsPopup(editor, points);
+            }
         }
     }));
 
@@ -404,4 +420,24 @@ export function deactivate(): Thenable<void> | undefined {
     if (memeManager) {
         return memeManager.play(MemeCategory.Shutdown, true);
     }
+}
+async function showPointsPopup(editor: vscode.TextEditor, points: number) {
+    const position = editor.selection.active;
+    const range = new vscode.Range(position, position);
+    
+    editor.setDecorations(pointsDecorationType, [{
+        range: range,
+        renderOptions: {
+            after: {
+                contentText: `+${points} pts 🔥`
+            }
+        }
+    }]);
+
+    // Clear after a short delay to simulate an animation/popup
+    setTimeout(() => {
+        if (vscode.window.activeTextEditor === editor) {
+            editor.setDecorations(pointsDecorationType, []);
+        }
+    }, 600);
 }
