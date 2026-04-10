@@ -49,6 +49,7 @@ var MemeCategory;
     MemeCategory["DeepWork"] = "DeepWork";
     MemeCategory["Success"] = "Success";
     MemeCategory["GitPush"] = "GitPush";
+    MemeCategory["Shutdown"] = "Shutdown";
 })(MemeCategory || (exports.MemeCategory = MemeCategory = {}));
 class MemeManager {
     context;
@@ -133,7 +134,7 @@ class MemeManager {
         });
     }
     async play(category, force = false) {
-        if (this.isPlaying)
+        if (this.isPlaying && !force)
             return;
         const config = vscode.workspace.getConfiguration('malayalamMemes');
         if (!config.get('enabled'))
@@ -205,6 +206,7 @@ const MEME_DIALOGUES = {
     [MemeCategory.ProjectError]: ['🐛 "Ee bug ente veedu polikkum!"', '⚠️ "Sheriyaakkada mone!"'],
     [MemeCategory.DeepWork]: ['🧠 "Mass aanu machane! Full power!"'],
     [MemeCategory.Success]: ['✅ "Thankyou! Nannaayi!"', '🎉 "Kidu! Ellam shariyaayi!"'],
-    [MemeCategory.GitPush]: ['🚀 "Push cheythu! Full success!"']
+    [MemeCategory.GitPush]: ['🚀 "Push cheythu! Full success!"'],
+    [MemeCategory.Shutdown]: ['🚪 "Enna njan angotu...!", "🏃‍♂️ "Pinne kaanam machane! Bye!"']
 };
 //# sourceMappingURL=memeManager.js.map

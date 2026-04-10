@@ -53,8 +53,18 @@ export function activate(context: vscode.ExtensionContext) {
     registerAllCommands(context, memeManager);
 
     // ── Event Triggers ───────────────────────────────────────────────
-    memeManager.play(MemeCategory.Startup);
-    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => memeManager.play(MemeCategory.FolderOpen)));
+    // If we have a workspace, play FolderOpen, else play generic Startup
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+        memeManager.play(MemeCategory.FolderOpen);
+    } else {
+        memeManager.play(MemeCategory.Startup);
+    }
+
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders((e) => {
+        if (e.added.length > 0) {
+            memeManager.play(MemeCategory.FolderOpen, true);
+        }
+    }));
     setupInactivityTimer(context);
 
     if (vscode.window.onDidEndTerminalShellExecution) {
@@ -227,7 +237,14 @@ function getStatsHtml(stats: any, uptime: number): string {
     </body></html>`;
 }
 
-export function deactivate() {
+export function deactivate(): Thenable<void> | undefined {
     if (idleTimer) clearInterval(idleTimer);
     if (wpmTimer) clearInterval(wpmTimer);
+    
+    // We try to play the shutdown meme. Use getInstance with null as it's already initialized
+    // or just use the local reference if we kept one.
+    const memeManager = MemeManager.getInstance(undefined as any);
+    if (memeManager) {
+        return memeManager.play(MemeCategory.Shutdown, true);
+    }
 }

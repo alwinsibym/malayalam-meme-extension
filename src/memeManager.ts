@@ -15,7 +15,8 @@ export enum MemeCategory {
     ProjectError = 'ProjectError',
     DeepWork = 'DeepWork',
     Success = 'Success',
-    GitPush = 'GitPush'
+    GitPush = 'GitPush',
+    Shutdown = 'Shutdown'
 }
 
 export type DeveloperMood = 'Focus' | 'Frustrated' | 'Mass' | 'Idle' | 'God Mode' | 'Jacky Entry';
@@ -118,7 +119,7 @@ export class MemeManager {
     }
 
     public async play(category: MemeCategory, force: boolean = false) {
-        if (this.isPlaying) return;
+        if (this.isPlaying && !force) return;
 
         const config = vscode.workspace.getConfiguration('malayalamMemes');
         if (!config.get('enabled')) return;
@@ -197,5 +198,6 @@ const MEME_DIALOGUES: Record<MemeCategory, string[]> = {
     [MemeCategory.ProjectError]: ['🐛 "Ee bug ente veedu polikkum!"', '⚠️ "Sheriyaakkada mone!"'],
     [MemeCategory.DeepWork]: ['🧠 "Mass aanu machane! Full power!"'],
     [MemeCategory.Success]: ['✅ "Thankyou! Nannaayi!"', '🎉 "Kidu! Ellam shariyaayi!"'],
-    [MemeCategory.GitPush]: ['🚀 "Push cheythu! Full success!"']
+    [MemeCategory.GitPush]: ['🚀 "Push cheythu! Full success!"'],
+    [MemeCategory.Shutdown]: ['🚪 "Enna njan angotu...!", "🏃‍♂️ "Pinne kaanam machane! Bye!"']
 };
