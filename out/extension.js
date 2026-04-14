@@ -45,8 +45,16 @@ let charCount = 0;
 let lastUpdate = Date.now();
 let statusItem;
 let volumeItem;
+let pointsDecorationType;
 function activate(context) {
     const memeManager = memeManager_1.MemeManager.getInstance(context);
+    pointsDecorationType = vscode.window.createTextEditorDecorationType({
+        after: {
+            margin: '0 0 0 2em',
+            textDecoration: 'none; font-weight: bold; color: #fbbf24; font-size: 0.9em; position: absolute;',
+        },
+        rangeBehavior: vscode.DecorationRangeBehavior.ClosedClosed
+    });
     // ── Status Bar Setup ─────────────────────────────────────────────
     statusItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     statusItem.command = 'malayalamMemes.controlPanel';
@@ -63,8 +71,14 @@ function activate(context) {
     // ── Typing & WPM Tracking ────────────────────────────────────────
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument((e) => {
         if (e.contentChanges.length > 0) {
-            charCount += e.contentChanges[0].text.length;
+            const added = e.contentChanges[0].text.length;
+            charCount += added;
             resetInactivityTimer(context);
+            const editor = vscode.window.activeTextEditor;
+            if (editor && added > 0 && added < 10) { // Only for typing, not copy-paste
+                const points = Math.floor(added / 2) + 1;
+                showPointsPopup(editor, points);
+            }
         }
     }));
     wpmTimer = setInterval(() => {
@@ -235,21 +249,54 @@ class MemeSidebarProvider {
                 const text = dialogues[Math.floor(Math.random() * dialogues.length)];
                 // Inform webview to show bubble
                 webviewView.webview.postMessage({ command: 'showSpeech', text });
-                // Play random meme sound (categorized if possible, or just random)
-                this._memeManager.play(Math.random() > 0.5 ? memeManager_1.MemeCategory.Success : memeManager_1.MemeCategory.Startup, true);
+                // Play random meme sound with cooldown (not forced)
+                this._memeManager.play(Math.random() > 0.5 ? memeManager_1.MemeCategory.Success : memeManager_1.MemeCategory.Startup);
             }
         });
-        this.updateWebview();
+        this.updateWebview(true);
         // Refresh when config changes
         vscode.workspace.onDidChangeConfiguration(e => {
             if (e.affectsConfiguration('malayalamMemes'))
-                this.updateWebview();
+                this.updateWebview(true);
         });
     }
-    updateWebview() {
+    updateWebview(forceReload = false) {
         if (!this._view)
             return;
-        this._view.webview.html = this._getHtml(this._memeManager.getStats());
+        if (forceReload || !this._isHtmlSet) {
+            this._view.webview.html = this._getHtml(this._memeManager.getStats());
+            this._isHtmlSet = true;
+            return;
+        }
+        // Just update existing DOM instead of reloading the webview to prevent reloading scripts
+        const stats = this._memeManager.getStats();
+        const config = vscode.workspace.getConfiguration('malayalamMemes');
+        let gifUri = '';
+        if (config.get('showVisuals')) {
+            const categoryKey = (stats.lastCategory || 'startup').toLowerCase().replace(/\s/g, '');
+            const visualsDir = path.join(this._extensionUri.fsPath, 'assets', 'visuals', categoryKey);
+            let gifFile = 'default.gif';
+            try {
+                if (fs.existsSync(visualsDir)) {
+                    const files = fs.readdirSync(visualsDir).filter(f => f.endsWith('.gif'));
+                    if (files.length > 0)
+                        gifFile = files[Math.floor(Math.random() * files.length)];
+                }
+            }
+            catch { /* ignore */ }
+            gifUri = this._view.webview.asWebviewUri(vscode.Uri.file(path.join(visualsDir, gifFile))).toString();
+        }
+        this._view.webview.postMessage({
+            command: 'updateStats',
+            stats,
+            gifUri,
+            color: this._getMoodColor(stats.mood)
+        });
+    }
+    _isHtmlSet = false;
+    _getMoodColor(mood) {
+        const moodColors = { 'Mass': '#facc15', 'God Mode': '#f472b6', 'Frustrated': '#f87171', 'Focus': '#38bdf8', 'Idle': '#94a3b8', 'Jacky Entry': '#fbbf24' };
+        return moodColors[mood] || '#38bdf8';
     }
     _getHtml(stats) {
         const config = vscode.workspace.getConfiguration('malayalamMemes');
@@ -257,8 +304,7 @@ class MemeSidebarProvider {
         const showPet = config.get('showPet');
         const companion = (config.get('selectedCompanion') || 'Jacky').toLowerCase();
         const movement = config.get('companionMovement') || 'Autonomous';
-        const moodColors = { 'Mass': '#facc15', 'God Mode': '#f472b6', 'Frustrated': '#f87171', 'Focus': '#38bdf8', 'Idle': '#94a3b8', 'Jacky Entry': '#fbbf24' };
-        const color = moodColors[stats.mood] || '#38bdf8';
+        const color = this._getMoodColor(stats.mood);
         let gifUri = '';
         if (showVisuals) {
             const categoryKey = (stats.lastCategory || 'startup').toLowerCase().replace(/\s/g, '');
@@ -305,16 +351,17 @@ class MemeSidebarProvider {
             .lab { font-size: 0.7em; color: #94a3b8; }
             .rank { padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; text-align: center; font-weight: bold; border: 1px solid rgba(255,255,255,0.05); }
         </style></head><body>
-            <div class="mood-badge">${stats.mood}</div>
-            <div class="visual-container"><img src="${gifUri}" onerror="this.src='https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidWtwN2N3eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxGZfVjVIdy/giphy.gif';" /></div>
+        </style></head><body>
+            <div class="mood-badge" id="mood-badge">${stats.mood}</div>
+            <div class="visual-container" id="visual-container"><img id="visual-img" src="${gifUri}" onerror="this.src='https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidWtwN2N3eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxGZfVjVIdy/giphy.gif';" /></div>
             
             <div class="companion-world" id="world">
                 <div class="bubble" id="bubble">...</div>
                 <img src="${companionUri}" class="companion" id="companion" />
             </div>
 
-            <div class="stats"><div class="card"><div class="val">${stats.devPoints}</div><div class="lab">POINTS</div></div><div class="card"><div class="val">${stats.wpm}</div><div class="lab">WPM</div></div></div>
-            <div class="rank">🏅 ${stats.rank}</div>
+            <div class="stats"><div class="card"><div class="val" id="dev-points">${stats.devPoints}</div><div class="lab">POINTS</div></div><div class="card"><div class="val" id="wpm">${stats.wpm}</div><div class="lab">WPM</div></div></div>
+            <div class="rank" id="rank">🏅 ${stats.rank}</div>
 
             <script>
                 const vscode = acquireVsCodeApi();
@@ -323,6 +370,9 @@ class MemeSidebarProvider {
                 const bubble = document.getElementById('bubble');
                 
                 const MOVEMENT = "${movement}";
+                let currentX = world.clientWidth / 2;
+                let targetX = currentX;
+                let isMoving = false;
                 
                 function showSpeech(text) {
                     bubble.innerText = text;
@@ -334,42 +384,83 @@ class MemeSidebarProvider {
 
                 window.addEventListener('message', event => {
                     const message = event.data;
-                    if (message.command === 'showSpeech') showSpeech(message.text);
+                    if (message.command === 'showSpeech') {
+                        showSpeech(message.text);
+                    } else if (message.command === 'updateStats') {
+                        document.getElementById('mood-badge').innerText = message.stats.mood;
+                        document.getElementById('mood-badge').style.background = message.color;
+                        document.getElementById('mood-badge').style.boxShadow = \`0 0 15px \${message.color}44\`;
+                        document.getElementById('dev-points').innerText = message.stats.devPoints;
+                        document.getElementById('dev-points').style.color = message.color;
+                        document.getElementById('wpm').innerText = message.stats.wpm;
+                        document.getElementById('wpm').style.color = message.color;
+                        document.getElementById('rank').innerText = '🏅 ' + message.stats.rank;
+                        if (message.gifUri && message.gifUri !== '') {
+                            document.getElementById('visual-img').src = message.gifUri;
+                        }
+                    }
                 });
 
                 companion.onclick = () => {
                     companion.style.transform = 'translateX(-50%) scale(1.3)';
-                    setTimeout(() => companion.style.transform = 'translateX(-50%) scale(1)', 200);
+                    setTimeout(() => {
+                         companion.style.transform = companion.dataset.dir === 'left' ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
+                    }, 200);
                     vscode.postMessage({ command: 'petClick' });
                 };
 
-                // Autonomous Movement Logic
-                if (MOVEMENT === 'Autonomous') {
-                    setInterval(() => {
-                        const randomX = Math.random() * (world.clientWidth - 80) + 40;
-                        companion.style.left = randomX + 'px';
+                // Advanced Autonomous Brain
+                function brainLoop() {
+                    if (MOVEMENT !== 'Autonomous') return;
+
+                    const decision = Math.random();
+                    
+                    if (decision > 0.6) { // Decided to Walk
+                        targetX = Math.random() * (world.clientWidth - 80) + 40;
+                        const direction = targetX > currentX ? 'right' : 'left';
                         
-                        // Small chance to talk spontaneously
-                        if (Math.random() > 0.8) {
-                            vscode.postMessage({ command: 'autoTalk' });
-                        }
-                    }, 5000);
+                        // Face the direction
+                        companion.dataset.dir = direction;
+                        companion.style.transform = direction === 'left' ? 'translateX(-50%) scaleX(-1)' : 'translateX(-50%)';
+                        
+                        // Dynamic duration based on distance
+                        const distance = Math.abs(targetX - currentX);
+                        const duration = distance * (10 + Math.random() * 20); // variable speed
+                        
+                        companion.style.transition = \`left \${duration}ms ease-in-out\`;
+                        companion.style.left = targetX + 'px';
+                        currentX = targetX;
+                        
+                        setTimeout(brainLoop, duration + 500 + Math.random() * 2000);
+                    } else if (decision > 0.4) { // Decided to Talk
+                        vscode.postMessage({ command: 'autoTalk' });
+                        setTimeout(brainLoop, 3000 + Math.random() * 2000);
+                    } else { // Just Chilling
+                        companion.style.animation = 'idle 1s infinite alternate ease-in-out';
+                        setTimeout(brainLoop, 2000 + Math.random() * 3000);
+                    }
+                }
+
+                if (MOVEMENT === 'Autonomous') {
+                    brainLoop();
                 } else if (MOVEMENT === 'Idle') {
                     companion.style.animation = 'idle 1s infinite alternate ease-in-out';
                 }
 
-                // Simple drag logic
+                // Dragging resets brain temporarily
                 let isDragging = false;
-                companion.onmousedown = (e) => { isDragging = true; };
-                document.onmouseup = () => { isDragging = false; };
+                companion.onmousedown = (e) => { isDragging = true; companion.style.transition = 'none'; };
+                document.onmouseup = () => { 
+                    isDragging = false; 
+                    const rect = companion.getBoundingClientRect();
+                    currentX = rect.left + rect.width / 2;
+                };
                 world.onmousemove = (e) => {
                     if (isDragging) {
                         const rect = world.getBoundingClientRect();
                         const x = Math.max(30, Math.min(rect.width - 30, e.clientX - rect.left));
                         companion.style.left = x + 'px';
-                        companion.style.transition = 'none';
-                    } else {
-                        companion.style.transition = MOVEMENT === 'Autonomous' ? 'left 2s ease-in-out' : 'transform 0.2s';
+                        currentX = x;
                     }
                 };
             </script>
@@ -395,5 +486,23 @@ function deactivate() {
     if (memeManager) {
         return memeManager.play(memeManager_1.MemeCategory.Shutdown, true);
     }
+}
+async function showPointsPopup(editor, points) {
+    const position = editor.selection.active;
+    const range = new vscode.Range(position, position);
+    editor.setDecorations(pointsDecorationType, [{
+            range: range,
+            renderOptions: {
+                after: {
+                    contentText: `+${points} pts 🔥`
+                }
+            }
+        }]);
+    // Clear after a short delay to simulate an animation/popup
+    setTimeout(() => {
+        if (vscode.window.activeTextEditor === editor) {
+            editor.setDecorations(pointsDecorationType, []);
+        }
+    }, 600);
 }
 //# sourceMappingURL=extension.js.map

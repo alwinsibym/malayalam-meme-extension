@@ -226,21 +226,57 @@ class MemeSidebarProvider implements vscode.WebviewViewProvider {
                 // Inform webview to show bubble
                 webviewView.webview.postMessage({ command: 'showSpeech', text });
                 
-                // Play random meme sound (categorized if possible, or just random)
-                this._memeManager.play(Math.random() > 0.5 ? MemeCategory.Success : MemeCategory.Startup, true);
+                // Play random meme sound with cooldown (not forced)
+                this._memeManager.play(Math.random() > 0.5 ? MemeCategory.Success : MemeCategory.Startup);
             }
         });
 
-        this.updateWebview();
+        this.updateWebview(true);
         
         // Refresh when config changes
         vscode.workspace.onDidChangeConfiguration(e => {
-            if (e.affectsConfiguration('malayalamMemes')) this.updateWebview();
+            if (e.affectsConfiguration('malayalamMemes')) this.updateWebview(true);
         });
     }
-    private updateWebview() {
+    private updateWebview(forceReload: boolean = false) {
         if (!this._view) return;
-        this._view.webview.html = this._getHtml(this._memeManager.getStats());
+        
+        if (forceReload || !this._isHtmlSet) {
+            this._view.webview.html = this._getHtml(this._memeManager.getStats());
+            this._isHtmlSet = true;
+            return;
+        }
+
+        // Just update existing DOM instead of reloading the webview to prevent reloading scripts
+        const stats = this._memeManager.getStats();
+        const config = vscode.workspace.getConfiguration('malayalamMemes');
+        let gifUri = '';
+        if (config.get('showVisuals')) {
+            const categoryKey = (stats.lastCategory || 'startup').toLowerCase().replace(/\s/g, '');
+            const visualsDir = path.join(this._extensionUri.fsPath, 'assets', 'visuals', categoryKey);
+            let gifFile = 'default.gif';
+            try {
+                if (fs.existsSync(visualsDir)) {
+                    const files = fs.readdirSync(visualsDir).filter(f => f.endsWith('.gif'));
+                    if (files.length > 0) gifFile = files[Math.floor(Math.random() * files.length)];
+                }
+            } catch { /* ignore */ }
+            gifUri = this._view.webview.asWebviewUri(vscode.Uri.file(path.join(visualsDir, gifFile))).toString();
+        }
+
+        this._view.webview.postMessage({
+            command: 'updateStats',
+            stats,
+            gifUri,
+            color: this._getMoodColor(stats.mood)
+        });
+    }
+
+    private _isHtmlSet = false;
+
+    private _getMoodColor(mood: string): string {
+        const moodColors: Record<string, string> = { 'Mass': '#facc15', 'God Mode': '#f472b6', 'Frustrated': '#f87171', 'Focus': '#38bdf8', 'Idle': '#94a3b8', 'Jacky Entry': '#fbbf24' };
+        return moodColors[mood] || '#38bdf8';
     }
     private _getHtml(stats: MemeStats) {
         const config = vscode.workspace.getConfiguration('malayalamMemes');
@@ -249,8 +285,7 @@ class MemeSidebarProvider implements vscode.WebviewViewProvider {
         const companion = (config.get<string>('selectedCompanion') || 'Jacky').toLowerCase();
         const movement = config.get<string>('companionMovement') || 'Autonomous';
 
-        const moodColors: Record<string, string> = { 'Mass': '#facc15', 'God Mode': '#f472b6', 'Frustrated': '#f87171', 'Focus': '#38bdf8', 'Idle': '#94a3b8', 'Jacky Entry': '#fbbf24' };
-        const color = moodColors[stats.mood] || '#38bdf8';
+        const color = this._getMoodColor(stats.mood);
         
         let gifUri = '';
         if (showVisuals) {
@@ -298,16 +333,17 @@ class MemeSidebarProvider implements vscode.WebviewViewProvider {
             .lab { font-size: 0.7em; color: #94a3b8; }
             .rank { padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; text-align: center; font-weight: bold; border: 1px solid rgba(255,255,255,0.05); }
         </style></head><body>
-            <div class="mood-badge">${stats.mood}</div>
-            <div class="visual-container"><img src="${gifUri}" onerror="this.src='https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidWtwN2N3eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxGZfVjVIdy/giphy.gif';" /></div>
+        </style></head><body>
+            <div class="mood-badge" id="mood-badge">${stats.mood}</div>
+            <div class="visual-container" id="visual-container"><img id="visual-img" src="${gifUri}" onerror="this.src='https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidWtwN2N3eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxGZfVjVIdy/giphy.gif';" /></div>
             
             <div class="companion-world" id="world">
                 <div class="bubble" id="bubble">...</div>
                 <img src="${companionUri}" class="companion" id="companion" />
             </div>
 
-            <div class="stats"><div class="card"><div class="val">${stats.devPoints}</div><div class="lab">POINTS</div></div><div class="card"><div class="val">${stats.wpm}</div><div class="lab">WPM</div></div></div>
-            <div class="rank">🏅 ${stats.rank}</div>
+            <div class="stats"><div class="card"><div class="val" id="dev-points">${stats.devPoints}</div><div class="lab">POINTS</div></div><div class="card"><div class="val" id="wpm">${stats.wpm}</div><div class="lab">WPM</div></div></div>
+            <div class="rank" id="rank">🏅 ${stats.rank}</div>
 
             <script>
                 const vscode = acquireVsCodeApi();
@@ -330,7 +366,21 @@ class MemeSidebarProvider implements vscode.WebviewViewProvider {
 
                 window.addEventListener('message', event => {
                     const message = event.data;
-                    if (message.command === 'showSpeech') showSpeech(message.text);
+                    if (message.command === 'showSpeech') {
+                        showSpeech(message.text);
+                    } else if (message.command === 'updateStats') {
+                        document.getElementById('mood-badge').innerText = message.stats.mood;
+                        document.getElementById('mood-badge').style.background = message.color;
+                        document.getElementById('mood-badge').style.boxShadow = \`0 0 15px \${message.color}44\`;
+                        document.getElementById('dev-points').innerText = message.stats.devPoints;
+                        document.getElementById('dev-points').style.color = message.color;
+                        document.getElementById('wpm').innerText = message.stats.wpm;
+                        document.getElementById('wpm').style.color = message.color;
+                        document.getElementById('rank').innerText = '🏅 ' + message.stats.rank;
+                        if (message.gifUri && message.gifUri !== '') {
+                            document.getElementById('visual-img').src = message.gifUri;
+                        }
+                    }
                 });
 
                 companion.onclick = () => {
@@ -398,7 +448,6 @@ class MemeSidebarProvider implements vscode.WebviewViewProvider {
             </script>
         </body></html>`;
     }
-}
 }
 
 function getStatsHtml(stats: any, uptime: number): string {
