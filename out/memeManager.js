@@ -139,6 +139,9 @@ class MemeManager {
         const config = vscode.workspace.getConfiguration('malayalamMemes');
         if (!config.get('enabled'))
             return;
+        const mode = config.get('intensityMode') || 'Balanced';
+        if (mode === 'Do Not Disturb')
+            return;
         // Points penalty for errors
         if (category === MemeCategory.TerminalError || category === MemeCategory.ProjectError) {
             this.stats.devPoints = Math.max(0, this.stats.devPoints - 50);
@@ -147,9 +150,26 @@ class MemeManager {
         else if (category === MemeCategory.Success) {
             this.stats.devPoints += 100;
         }
+        let cooldown = (config.get('cooldown') || 10) * 1000;
+        // Ensure category is enabled unless in Aggressive mode
+        const categoryKey = category.toLowerCase().replace(/\s/g, '');
+        const isCategoryEnabled = config.get(`category.${categoryKey}`) ?? true;
+        if (mode === 'Aggressive') {
+            cooldown = 1000; // Just 1 sec, full menace!
+        }
+        else {
+            // Respect user toggles for categories if not in aggressive mode
+            if (!isCategoryEnabled && !force)
+                return;
+            if (mode === 'Chill') {
+                cooldown = cooldown * 3; // Triple the cooldown
+                if (category === MemeCategory.ProjectError || category === MemeCategory.TerminalError || category === MemeCategory.Inactivity) {
+                    return; // Silence annoying negative feedback in chill mode
+                }
+            }
+        }
         if (!force) {
             const now = Date.now();
-            const cooldown = (config.get('cooldown') || 10) * 1000;
             if (now - this.lastPlayedTime < cooldown)
                 return;
         }
@@ -158,6 +178,12 @@ class MemeManager {
         const pool = [...localItems];
         if (config.get('sourcePreference') === 'hybrid') {
             pool.push(...remoteItems);
+        }
+        // Additional special audios for aggressive mode
+        if (mode === 'Aggressive') {
+            const extraSpecial = this.localAssets.get(MemeCategory.DeepWork) || [];
+            if (extraSpecial.length > 0)
+                pool.push(...extraSpecial);
         }
         if (pool.length === 0)
             return;

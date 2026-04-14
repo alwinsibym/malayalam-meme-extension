@@ -127,8 +127,10 @@ function registerAllCommands(context, memeManager) {
         const config = vscode.workspace.getConfiguration('malayalamMemes');
         const isEnabled = config.get('enabled');
         const volume = config.get('volume') || 0.5;
+        const currentMode = config.get('intensityMode') || 'Balanced';
         const items = [
             { label: `$(${isEnabled ? 'check' : 'close'}) Extension: ${isEnabled ? 'ON' : 'OFF'}`, action: 'toggle' },
+            { label: `$(pulse) Mode: ${currentMode}`, action: 'mode' },
             { label: `$(unmute) Volume: ${Math.round(volume * 100)}%`, action: 'volume' },
             { label: `$(play) Play Random Meme`, action: 'random' },
             { label: `$(library) Meme Gallery`, action: 'gallery' },
@@ -142,6 +144,9 @@ function registerAllCommands(context, memeManager) {
         switch (picked.action) {
             case 'toggle':
                 vscode.commands.executeCommand('malayalamMemes.toggle');
+                break;
+            case 'mode':
+                vscode.commands.executeCommand('malayalamMemes.setMode');
                 break;
             case 'volume':
                 vscode.commands.executeCommand('malayalamMemes.setVolume');
@@ -161,6 +166,15 @@ function registerAllCommands(context, memeManager) {
             case 'settings':
                 vscode.commands.executeCommand('workbench.action.openSettings', 'malayalamMemes');
                 break;
+        }
+    }));
+    // Mode Setting
+    context.subscriptions.push(vscode.commands.registerCommand('malayalamMemes.setMode', async () => {
+        const modes = ['Aggressive', 'Balanced', 'Chill', 'Do Not Disturb'];
+        const picked = await vscode.window.showQuickPick(modes, { title: '🔥 Select Intensity Mode' });
+        if (picked) {
+            await vscode.workspace.getConfiguration('malayalamMemes').update('intensityMode', picked, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(`Mode set to: ${picked}`);
         }
     }));
     // 2. Toggle

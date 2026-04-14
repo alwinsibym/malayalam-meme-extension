@@ -95,6 +95,10 @@
       {
         "command": "malayalamMemes.togglePet",
         "title": "Malayalam Memes: Toggle Meme Companion 🎭"
+      },
+      {
+        "command": "malayalamMemes.setMode",
+        "title": "Malayalam Memes: Select Intensity Mode 🔥"
       }
     ],
     "keybindings": [
@@ -137,6 +141,13 @@
           "default": true,
           "description": "Enable/Disable all meme alerts.",
           "order": 1
+        },
+        "malayalamMemes.intensityMode": {
+          "type": "string",
+          "enum": ["Aggressive", "Balanced", "Chill", "Do Not Disturb"],
+          "default": "Balanced",
+          "description": "Choose your coding experience: Aggressive (constant menace), Balanced, Chill, or Do Not Disturb.",
+          "order": 2
         },
         "malayalamMemes.volume": {
           "type": "number",

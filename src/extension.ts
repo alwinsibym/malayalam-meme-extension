@@ -106,9 +106,11 @@ function registerAllCommands(context: vscode.ExtensionContext, memeManager: Meme
         const config = vscode.workspace.getConfiguration('malayalamMemes');
         const isEnabled = config.get('enabled');
         const volume = config.get<number>('volume') || 0.5;
+        const currentMode = config.get<string>('intensityMode') || 'Balanced';
 
         const items = [
             { label: `$(${isEnabled ? 'check' : 'close'}) Extension: ${isEnabled ? 'ON' : 'OFF'}`, action: 'toggle' },
+            { label: `$(pulse) Mode: ${currentMode}`, action: 'mode' },
             { label: `$(unmute) Volume: ${Math.round(volume * 100)}%`, action: 'volume' },
             { label: `$(play) Play Random Meme`, action: 'random' },
             { label: `$(library) Meme Gallery`, action: 'gallery' },
@@ -122,12 +124,23 @@ function registerAllCommands(context: vscode.ExtensionContext, memeManager: Meme
 
         switch (picked.action) {
             case 'toggle': vscode.commands.executeCommand('malayalamMemes.toggle'); break;
+            case 'mode': vscode.commands.executeCommand('malayalamMemes.setMode'); break;
             case 'volume': vscode.commands.executeCommand('malayalamMemes.setVolume'); break;
             case 'random': memeManager.play(Object.values(MemeCategory)[Math.floor(Math.random() * 8)], true); break;
             case 'gallery': vscode.commands.executeCommand('malayalamMemes.showGallery'); break;
             case 'stats': vscode.commands.executeCommand('malayalamMemes.showStats'); break;
             case 'jacky': vscode.commands.executeCommand('malayalamMemes.sagarAliasJacky'); break;
             case 'settings': vscode.commands.executeCommand('workbench.action.openSettings', 'malayalamMemes'); break;
+        }
+    }));
+
+    // Mode Setting
+    context.subscriptions.push(vscode.commands.registerCommand('malayalamMemes.setMode', async () => {
+        const modes = ['Aggressive', 'Balanced', 'Chill', 'Do Not Disturb'];
+        const picked = await vscode.window.showQuickPick(modes, { title: '🔥 Select Intensity Mode' });
+        if (picked) {
+            await vscode.workspace.getConfiguration('malayalamMemes').update('intensityMode', picked, vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage(`Mode set to: ${picked}`);
         }
     }));
 
