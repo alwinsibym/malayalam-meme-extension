@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { MemeManager, MemeCategory, MemeStats, COMPANION_DIALOGUES } from './memeManager';
+import { ControlPanelWebview } from './controlPanelWebview';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -97,41 +98,22 @@ export function activate(context: vscode.ExtensionContext) {
         }
     }));
 
+    // Project Errors (On Save)
+    context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((doc) => {
+        const diagnostics = vscode.languages.getDiagnostics(doc.uri);
+        const errorCount = diagnostics.filter(d => d.severity === vscode.DiagnosticSeverity.Error).length;
+        if (errorCount > 0) {
+            memeManager.play(MemeCategory.ProjectError);
+        }
+    }));
+
     console.log('[Malayalam Memes] Fully restored and ready!');
 }
 
 function registerAllCommands(context: vscode.ExtensionContext, memeManager: MemeManager) {
     // 1. Control Panel
-    context.subscriptions.push(vscode.commands.registerCommand('malayalamMemes.controlPanel', async () => {
-        const config = vscode.workspace.getConfiguration('malayalamMemes');
-        const isEnabled = config.get('enabled');
-        const volume = config.get<number>('volume') || 0.5;
-        const currentMode = config.get<string>('intensityMode') || 'Balanced';
-
-        const items = [
-            { label: `$(${isEnabled ? 'check' : 'close'}) Extension: ${isEnabled ? 'ON' : 'OFF'}`, action: 'toggle' },
-            { label: `$(pulse) Mode: ${currentMode}`, action: 'mode' },
-            { label: `$(unmute) Volume: ${Math.round(volume * 100)}%`, action: 'volume' },
-            { label: `$(play) Play Random Meme`, action: 'random' },
-            { label: `$(library) Meme Gallery`, action: 'gallery' },
-            { label: `$(graph) View Session Stats`, action: 'stats' },
-            { label: `$(zap) SAGAR ALIAS JACKY!`, action: 'jacky' },
-            { label: `$(settings-gear) Open Settings`, action: 'settings' }
-        ];
-
-        const picked = await vscode.window.showQuickPick(items, { title: '🎬 Malayalam Memes — Control Panel' });
-        if (!picked) return;
-
-        switch (picked.action) {
-            case 'toggle': vscode.commands.executeCommand('malayalamMemes.toggle'); break;
-            case 'mode': vscode.commands.executeCommand('malayalamMemes.setMode'); break;
-            case 'volume': vscode.commands.executeCommand('malayalamMemes.setVolume'); break;
-            case 'random': memeManager.play(Object.values(MemeCategory)[Math.floor(Math.random() * 8)], true); break;
-            case 'gallery': vscode.commands.executeCommand('malayalamMemes.showGallery'); break;
-            case 'stats': vscode.commands.executeCommand('malayalamMemes.showStats'); break;
-            case 'jacky': vscode.commands.executeCommand('malayalamMemes.sagarAliasJacky'); break;
-            case 'settings': vscode.commands.executeCommand('workbench.action.openSettings', 'malayalamMemes'); break;
-        }
+    context.subscriptions.push(vscode.commands.registerCommand('malayalamMemes.controlPanel', () => {
+        ControlPanelWebview.createOrShow(context.extensionUri, memeManager);
     }));
 
     // Mode Setting
@@ -345,7 +327,6 @@ class MemeSidebarProvider implements vscode.WebviewViewProvider {
             .val { font-size: 1.4em; font-weight: bold; color: ${color}; }
             .lab { font-size: 0.7em; color: #94a3b8; }
             .rank { padding: 10px; background: rgba(255,255,255,0.03); border-radius: 8px; text-align: center; font-weight: bold; border: 1px solid rgba(255,255,255,0.05); }
-        </style></head><body>
         </style></head><body>
             <div class="mood-badge" id="mood-badge">${stats.mood}</div>
             <div class="visual-container" id="visual-container"><img id="visual-img" src="${gifUri}" onerror="this.src='https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExNHJidWtwN2N3eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4eGN4JmVwPXYxX2ludGVybmFsX2dpZl9ieV9pZCZjdD1n/3o7TKMGpxGZfVjVIdy/giphy.gif';" /></div>

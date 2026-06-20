@@ -175,9 +175,15 @@ class MemeManager {
         }
         const localItems = this.localAssets.get(category) || [];
         const remoteItems = this.remoteAssets.get(category) || [];
-        const pool = [...localItems];
+        let pool = [...localItems];
         if (config.get('sourcePreference') === 'hybrid') {
             pool.push(...remoteItems);
+        }
+        if (category === MemeCategory.Startup) {
+            const intros = pool.filter(f => f.toLowerCase().includes('sagar') || f.toLowerCase().includes('intro') || f.toLowerCase().includes('bgm') || f.toLowerCase().includes('theme'));
+            if (intros.length > 0) {
+                pool = intros;
+            }
         }
         // Additional special audios for aggressive mode
         if (mode === 'Aggressive') {
